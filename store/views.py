@@ -10,8 +10,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     queryset = Product.objects.select_related('category').all()
 
-    def get_serializer_context(self):
-        return {'request': self.request}
+
 
     def destroy(self, request, pk):
         product = get_object_or_404(
