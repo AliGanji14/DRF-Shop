@@ -1,10 +1,13 @@
 from django.urls import path
+from rest_framework_nested import routers
+
 from . import views
 
-urlpatterns = [
-    path('', views.welcome_message),
-    path('hello/<name>/', views.say_hello),
-    path('bye/', views.say_bye),
-    path('123/', views.say_123),
-    path('something/<int:num>/', views.something),
-]
+app_name = 'store'
+
+router = routers.DefaultRouter()
+
+router.register('products', views.ProductViewSet, basename='product')
+
+
+urlpatterns = router.urls
