@@ -2,7 +2,7 @@ from rest_framework import serializers
 from decimal import Decimal
 from django.utils.text import slugify
 
-from .models import Product, Category
+from .models import Product, Category, Comment
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -48,7 +48,7 @@ class ProductSerializer(serializers.ModelSerializer):
         if len(data['name']) < 5:
             raise serializers.ValidationError(
                 'Product title length should be at least 5'
-                )
+            )
         return data
 
     def create(self, validated_data):
@@ -56,3 +56,16 @@ class ProductSerializer(serializers.ModelSerializer):
         product.slug = slugify(product.name)
         product.save()
         return product
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['id', 'name', 'body']
+
+    def create(self, validated_data):
+        product_pk = self.context['product_pk']
+        return Comment.objects.create(
+            product_id=product_pk,
+            **validated_data
+        )
