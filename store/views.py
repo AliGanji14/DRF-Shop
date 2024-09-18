@@ -1,10 +1,13 @@
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.viewsets import GenericViewSet
+from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, DestroyModelMixin
 from django.shortcuts import get_object_or_404
 
-from .models import Product, Category, Comment, Customer
-from .serializers import ProductSerializer, CategorySerializer, CommentSerializer, CustomerSerializer
+
+from .models import Product, Category, Comment, Customer, Cart
+from .serializers import ProductSerializer, CategorySerializer, CommentSerializer, CustomerSerializer, CartSerializer
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -56,6 +59,11 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         return {'product_pk': self.kwargs['product_pk']}
+
+
+class CartViewSet(CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, GenericViewSet):
+    serializer_class = CartSerializer
+    queryset = Cart.objects.all()
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
