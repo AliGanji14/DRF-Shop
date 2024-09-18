@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 
-from .models import Product, Category, Comment
-from .serializers import ProductSerializer, CategorySerializer, CommentSerializer
+from .models import Product, Category, Comment, Customer
+from .serializers import ProductSerializer, CategorySerializer, CommentSerializer, CustomerSerializer
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -56,3 +56,8 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         return {'product_pk': self.kwargs['product_pk']}
+
+
+class CustomerViewSet(viewsets.ModelViewSet):
+    serializer_class = CustomerSerializer
+    queryset = Customer.objects.all()
