@@ -6,8 +6,8 @@ from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, DestroyM
 from django.shortcuts import get_object_or_404
 
 
-from .models import Product, Category, Comment, Customer, Cart
-from .serializers import ProductSerializer, CategorySerializer, CommentSerializer, CustomerSerializer, CartSerializer
+from .models import Product, Category, Comment, Customer, Cart, CartItem
+from .serializers import ProductSerializer, CategorySerializer, CommentSerializer, CustomerSerializer, CartSerializer, CartItemSerializer
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -59,6 +59,17 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         return {'product_pk': self.kwargs['product_pk']}
+
+
+class CartItemViewSet(viewsets.ModelViewSet):
+    serializer_class = CartItemSerializer
+    
+
+    def get_queryset(self):
+        cart_pk = self.kwargs['cart_pk']
+        return CartItem.objects.select_related('product').filter(
+            cart_id = cart_pk,
+        ).all()
 
 
 class CartViewSet(CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, GenericViewSet):
