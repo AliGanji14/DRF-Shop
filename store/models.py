@@ -9,6 +9,10 @@ class Category(models.Model):
     top_product = models.ForeignKey(
         'Product', on_delete=models.SET_NULL, null=True, related_name='+')
 
+    class Meta:
+        verbose_name = 'category'
+        verbose_name_plural = 'categorise'
+
     def __str__(self):
         return self.title
 
@@ -16,6 +20,9 @@ class Category(models.Model):
 class Discount(models.Model):
     discount = models.FloatField()
     description = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f'{self.discount} | {self.description}'
 
 
 class Product(models.Model):
@@ -26,9 +33,13 @@ class Product(models.Model):
     description = models.TextField()
     unit_price = models.DecimalField(max_digits=6, decimal_places=2)
     inventory = models.IntegerField()
+    discounts = models.ManyToManyField(Discount, blank=True)
+
     datetime_created = models.DateTimeField(auto_now_add=True)
     datetime_modified = models.DateTimeField(auto_now=True)
-    discounts = models.ManyToManyField(Discount, blank=True)
+
+    def __str__(self):
+        return self.name
 
 
 class Customer(models.Model):
@@ -54,6 +65,11 @@ class Address(models.Model):
     street = models.CharField(max_length=255)
 
 
+class UnpaidOrderManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(status=Order.ORDER_STATUS_UNPAID)
+
+
 class Order(models.Model):
     ORDER_STATUS_PAID = 'p'
     ORDER_STATUS_UNPAID = 'u'
@@ -70,6 +86,12 @@ class Order(models.Model):
     status = models.CharField(
         max_length=1, choices=ORDER_STATUS, default=ORDER_STATUS_UNPAID)
 
+    objects = models.Manager()
+    unpaid_orders = UnpaidOrderManager()
+
+    def __str__(self):
+        return f'order id: {self.id}'
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(
@@ -81,6 +103,16 @@ class OrderItem(models.Model):
 
     class Meta:
         unique_together = [['order', 'product']]
+
+
+class CommentManager(models.Manager):
+    def get_approved(self):
+        return self.get_queryset().filter(status=Comment.COMMENT_STATUS_APPROVED)
+
+
+class ApprovedCommentManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(status=Comment.COMMENT_STATUS_APPROVED)
 
 
 class Comment(models.Model):
@@ -100,6 +132,9 @@ class Comment(models.Model):
     datetime_created = models.DateTimeField(auto_now_add=True)
     status = models.CharField(
         max_length=2, choices=COMMENT_STATUS, default=COMMENT_STATUS_WAITING)
+
+    objects = CommentManager()
+    approved = ApprovedCommentManager()
 
 
 class Cart(models.Model):

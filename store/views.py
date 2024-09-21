@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 
 from .permissions import IsAdminOrReadOnly, SendPrivateEmailToCustomerPermission
-from .models import Product, Category, Comment, Customer, Cart, CartItem
+from .models import Product, Category, Comment, Customer, Cart, CartItem, Order
 from .serializers import (ProductSerializer,
                           CategorySerializer,
                           CommentSerializer, CustomerSerializer,
@@ -15,6 +15,7 @@ from .serializers import (ProductSerializer,
                           CartItemSerializer,
                           AddCartItemSerializer,
                           UpdateCartItemSerializer,
+                          OrderSerializer,
                           )
 
 
@@ -117,3 +118,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
     @action(detail=True, permission_classes=[SendPrivateEmailToCustomerPermission])
     def send_private_email(self, request, pk):
         return Response(f'Sending private email to customer {pk=}')
+
+
+class OrderViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderSerializer
+    queryset = Order.objects.all()
