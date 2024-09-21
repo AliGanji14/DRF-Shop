@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from django.shortcuts import get_object_or_404
 
-
+from .permissions import IsAdminOrReadOnly
 from .models import Product, Category, Comment, Customer, Cart, CartItem
 from .serializers import (ProductSerializer,
                           CategorySerializer,
@@ -41,6 +41,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 class CategoryViewSet(viewsets.ModelViewSet):
     serializer_class = CategorySerializer
     queryset = Category.objects.prefetch_related('products').all()
+    permission_classes = [IsAdminOrReadOnly]
 
     def destroy(self, request, pk):
         category = get_object_or_404(
