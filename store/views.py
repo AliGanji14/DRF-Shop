@@ -4,10 +4,9 @@ from rest_framework import status
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, DestroyModelMixin
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
-from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 
-from .permissions import IsAdminOrReadOnly
+from .permissions import IsAdminOrReadOnly, SendPrivateEmailToCustomerPermission
 from .models import Product, Category, Comment, Customer, Cart, CartItem
 from .serializers import (ProductSerializer,
                           CategorySerializer,
@@ -114,3 +113,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)
+
+    @action(detail=True, permission_classes=[SendPrivateEmailToCustomerPermission])
+    def send_private_email(self, request, pk):
+        return Response(f'Sending private email to customer {pk=}')
