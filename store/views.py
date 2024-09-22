@@ -19,6 +19,7 @@ from .serializers import (ProductSerializer,
                           OrderSerializer,
                           OrderForAdminSerializer,
                           OrderCreateSerializer,
+                          OrderUpdateSerializer,
                           )
 
 
@@ -124,7 +125,12 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
 
 class OrderViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'delete', 'option', 'head']
+
+    def get_permissions(self):
+        if self.request.method in ['PATCH', 'DELETE']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         user = self.request.user
@@ -142,6 +148,9 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return OrderCreateSerializer
+
+        if self.request.method == 'PATCH':
+            return OrderUpdateSerializer
 
         if self.request.user.is_staff:
             return OrderForAdminSerializer
