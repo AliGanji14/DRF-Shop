@@ -18,6 +18,7 @@ from .serializers import (ProductSerializer,
                           UpdateCartItemSerializer,
                           OrderSerializer,
                           OrderForAdminSerializer,
+                          OrderCreateSerializer,
                           )
 
 
@@ -139,6 +140,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         return queryset.filter(customer__user_id=user.id)
 
     def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return OrderCreateSerializer
+
         if self.request.user.is_staff:
             return OrderForAdminSerializer
         return OrderSerializer
+
+    def get_serializer_context(self):
+        return {'user_id': self.request.user.id}
