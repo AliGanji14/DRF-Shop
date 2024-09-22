@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from django.db.models import Prefetch
 
+from .signals import order_created
 from .permissions import IsAdminOrReadOnly, SendPrivateEmailToCustomerPermission
 from .models import Product, Category, Comment, Customer, Cart, CartItem, Order, OrderItem
 from .serializers import (ProductSerializer,
@@ -165,6 +166,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         )
         create_order_serializer.is_valid(raise_exception=True)
         created_order = create_order_serializer.save()
+
+        order_created.send_robust(self.__class__, order=created_order)
 
         serializer = OrderSerializer(created_order)
         return Response(serializer.data)
