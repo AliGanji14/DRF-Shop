@@ -5,9 +5,10 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, DestroyModelMixin
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
+from django.db.models import Prefetch
 
 from .permissions import IsAdminOrReadOnly, SendPrivateEmailToCustomerPermission
-from .models import Product, Category, Comment, Customer, Cart, CartItem, Order
+from .models import Product, Category, Comment, Customer, Cart, CartItem, Order, OrderItem
 from .serializers import (ProductSerializer,
                           CategorySerializer,
                           CommentSerializer, CustomerSerializer,
@@ -122,4 +123,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
-    queryset = Order.objects.all()
+
+    def get_queryset(self):
+        return Order.objects.prefetch_related(
+            Prefetch(
+                'items',
+                queryset=OrderItem.objects.select_related('product')
+            )
+        ).select_related('customer__user').all()
