@@ -17,6 +17,7 @@ from .serializers import (ProductSerializer,
                           AddCartItemSerializer,
                           UpdateCartItemSerializer,
                           OrderSerializer,
+                          OrderForAdminSerializer,
                           )
 
 
@@ -122,7 +123,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
 
 class OrderViewSet(viewsets.ModelViewSet):
-    serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -136,5 +136,9 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         if user.is_staff:
             return queryset
-
         return queryset.filter(customer__user_id=user.id)
+
+    def get_serializer_class(self):
+        if self.request.user.is_staff:
+            return OrderForAdminSerializer
+        return OrderSerializer
