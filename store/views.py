@@ -149,3 +149,13 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         return {'user_id': self.request.user.id}
+
+    def create(self, request, *args, **kwargs):
+        create_order_serializer = OrderCreateSerializer(
+            data=request.data, context={'user_id': self.request.user.id},
+        )
+        create_order_serializer.is_valid(raise_exception=True)
+        created_order = create_order_serializer.save()
+
+        serializer = OrderSerializer(created_order)
+        return Response(serializer.data)
