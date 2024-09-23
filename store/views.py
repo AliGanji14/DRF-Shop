@@ -21,6 +21,7 @@ from .serializers import (ProductSerializer,
                           OrderForAdminSerializer,
                           OrderCreateSerializer,
                           OrderUpdateSerializer,
+                          OrderItemSerializer,
                           )
 
 
@@ -127,6 +128,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
 class OrderViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'option', 'head']
+    permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
         if self.request.method in ['PATCH', 'DELETE']:
@@ -187,3 +189,23 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         order.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class OrderItemViewSet(viewsets.ModelViewSet):
+    http_method_names = ['get', 'delete', 'option', 'head']
+    serializer_class = OrderItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        order_pk = self.kwargs['order_pk']
+        user = self.request.user
+
+        queryset = OrderItem.objects.select_related(
+            'order',
+            'product'
+        ).filter(order_id=order_pk).all()
+
+        if user.is_staff:
+            return queryset
+
+        return queryset.filter(order__customer__user_id=user.id)
