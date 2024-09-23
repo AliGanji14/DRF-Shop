@@ -153,7 +153,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         if self.request.method == 'PATCH':
             return OrderUpdateSerializer
 
-        if self.request.user.is_staff:
+        user = self.request.user
+
+        if user.is_staff:
             return OrderForAdminSerializer
         return OrderSerializer
 
@@ -170,4 +172,18 @@ class OrderViewSet(viewsets.ModelViewSet):
         order_created.send_robust(self.__class__, order=created_order)
 
         serializer = OrderSerializer(created_order)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, pk):
+        order = Order.objects.prefetch_related('items').get(pk=pk)
+
+        if order.items.all().count() > 0:
+            return Response({
+                'error':
+                    'There is some order items including this order.'
+                    'Please remove them first.'},
+                status=status.HTTP_405_METHOD_NOT_ALLOWED
+            )
+
+        order.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
