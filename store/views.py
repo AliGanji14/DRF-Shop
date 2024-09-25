@@ -1,6 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, DestroyModelMixin
 from rest_framework.decorators import action
@@ -8,6 +9,8 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from django.db.models import Prefetch
 
 from .signals import order_created
+from .filters import ProductFilter
+from .paginations import DefaultPagination
 from .permissions import IsAdminOrReadOnly, SendPrivateEmailToCustomerPermission
 from .models import Product, Category, Comment, Customer, Cart, CartItem, Order, OrderItem
 from .serializers import (ProductSerializer,
@@ -28,6 +31,13 @@ from .serializers import (ProductSerializer,
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     queryset = Product.objects.select_related('category').all()
+    filter_backends = [SearchFilter, OrderingFilter]
+    permission_classes = [IsAdminOrReadOnly]
+    filterset_class = ProductFilter
+    ordering_fields = ['name', 'unit_price', 'inventory']
+    search_fields = ['name', 'category__title']
+    pagination_class = DefaultPagination
+    ordering = ['id']
 
     def destroy(self, request, pk):
         product = get_object_or_404(
