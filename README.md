@@ -10,5 +10,5 @@ This project is a standalone **backend API** developed using **Django Rest Frame
 - ✅ **User reviews** for products  
 - ✅ **High-level security implementation**  
 
-## Installation & Setup
-To run this project locally, follow these steps:
+---
+🚀 **Developed with Django Rest Framework**
