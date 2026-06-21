@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from uuid import uuid4
-
+import uuid
 
 class Category(models.Model):
     title = models.CharField(max_length=255)
@@ -138,9 +138,8 @@ class Comment(models.Model):
 
 
 class Cart(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid4)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
-
 
 class CartItem(models.Model):
     cart = models.ForeignKey(
