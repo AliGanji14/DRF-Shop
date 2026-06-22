@@ -8,8 +8,9 @@ from rest_framework.mixins import (
     RetrieveModelMixin,
     DestroyModelMixin,
 )
+from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from django.db.models import Prefetch
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
@@ -45,8 +46,9 @@ from .serializers import (
     OrderItemSerializer,
 )
 
-@method_decorator(cache_page(60*5), name='list')
-@method_decorator(cache_page(60*5), name='retrieve')
+
+@method_decorator(cache_page(60 * 5), name="list")
+@method_decorator(cache_page(60 * 5), name="retrieve")
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     queryset = Product.objects.select_related("category").all()
@@ -58,8 +60,8 @@ class ProductViewSet(viewsets.ModelViewSet):
     pagination_class = DefaultPagination
     ordering = ["id"]
 
-    def destroy(self, request, pk):
-        product = get_object_or_404(Product.objects.select_related("category"), pk=pk)
+    def destroy(self, request, *args, **kwargs):
+        product = get_object_or_404(Product.objects.select_related("category"), pk=kwargs["pk"])
         if product.order_items.count() > 0:
             return Response(
                 {
@@ -77,10 +79,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.prefetch_related("products").all()
     permission_classes = [IsAdminOrReadOnly]
 
-    def destroy(self, request, pk):
+    def destroy(self, request, *args, **kwargs):
         category = get_object_or_404(
             Category.objects.prefetch_related("products"),
-            pk=pk,
+            pk=kwargs["pk"],
         )
         if category.products.count() > 0:
             return Response(
@@ -135,7 +137,7 @@ class CartViewSet(
 ):
     serializer_class = CartSerializer
     queryset = Cart.objects.prefetch_related("items__product").all()
-    lookup_value_regex = "[0-9a-fA-F]{8}\-?[0-9a-fA-F]{4}\-?[0-9a-fA-F]{4}\-?[0-9a-fA-F]{4}\-?[0-9a-fA-F]{12}"
+    lookup_value_regex = r"[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}"
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -146,7 +148,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["GET", "PUT"], permission_classes=[IsAuthenticated])
     def me(self, request):
         user_id = request.user.id
-        customer = Customer.objects.get(user_id=user_id)
+        customer = get_object_or_404(Customer, user_id=user_id)
         if request.method == "GET":
             serializer = CustomerSerializer(customer)
             return Response(serializer.data)
@@ -162,7 +164,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
 
 class OrderViewSet(viewsets.ModelViewSet):
-    http_method_names = ["get", "post", "patch", "delete", "option", "head"]
+    http_method_names = ["get", "post", "patch", "delete", "options", "head"]
     permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
@@ -213,10 +215,10 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer = OrderSerializer(created_order)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def destroy(self, request, pk):
-        order = Order.objects.prefetch_related("items").get(pk=pk)
+    def destroy(self, request, *args, **kwargs):
+        order = Order.objects.prefetch_related("items").get(pk=kwargs["pk"])
 
-        if order.items.all().count() > 0:
+        if order.items.exists():
             return Response(
                 {
                     "error": "There is some order items including this order."
@@ -230,7 +232,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
 class OrderItemViewSet(viewsets.ModelViewSet):
-    http_method_names = ["get", "delete", "option", "head"]
+    http_method_names = ["get", "delete", "options", "head"]
     serializer_class = OrderItemSerializer
     permission_classes = [IsAuthenticated]
 

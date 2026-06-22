@@ -1,4 +1,4 @@
-from django.db.models.signals import post_save,post_delete
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.conf import settings
 from django.core.cache import cache
@@ -15,7 +15,10 @@ def create_customer_profile_for_newly_created_user(sender, instance, created, **
 @receiver(post_save)
 def clear_cache_on_save(sender, instance, **kwargs):
     try:
-        if sender.__module__.startswith('store.') or getattr(sender._meta, 'app_label', '') == 'store':
+        if (
+            sender.__module__.startswith("store.")
+            or getattr(sender._meta, "app_label", "") == "store"
+        ):
             cache.clear()
     except Exception:
         # avoid raising during migrations or other operations
@@ -25,7 +28,10 @@ def clear_cache_on_save(sender, instance, **kwargs):
 @receiver(post_delete)
 def clear_cache_on_delete(sender, instance, **kwargs):
     try:
-        if sender.__module__.startswith('store.') or getattr(sender._meta, 'app_label', '') == 'store':
+        if (
+            sender.__module__.startswith("store.")
+            or getattr(sender._meta, "app_label", "") == "store"
+        ):
             cache.clear()
     except Exception:
         pass

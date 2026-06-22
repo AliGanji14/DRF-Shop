@@ -27,3 +27,5 @@ urllib3==2.7.0
 factory-boy
 Faker
 django-redis
+black
+flake8

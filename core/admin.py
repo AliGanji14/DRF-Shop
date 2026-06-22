@@ -8,7 +8,7 @@ from .models import CustomUser
 class CustomUserAdmin(UserAdmin):
     add_fieldsets = (
         (
-            'AddUser',
+            "AddUser",
             {
                 "classes": ("wide",),
                 "fields": (
@@ -17,8 +17,8 @@ class CustomUserAdmin(UserAdmin):
                     "password1",
                     "password2",
                     "first_name",
-                    "last_name"
-                    ),
+                    "last_name",
+                ),
             },
         ),
     )
