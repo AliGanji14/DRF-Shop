@@ -24,10 +24,13 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ["id", "title", "description", "number_of_product"]
 
     def validate(self, data):
-        if len(data["title"]) < 5:
+        title = data.get("title")
+
+        if title is not None and len(title) < 5:
             raise serializers.ValidationError(
-                "Category title length should be at least 5."
+                {"title": "Category title length should be at least 5."}
             )
+
         return data
 
 
@@ -54,10 +57,16 @@ class ProductSerializer(serializers.ModelSerializer):
         return round(product.unit_price * Decimal(1.09), 2)
 
     def validate(self, data):
-        if len(data["name"]) < 5:
+        name = data.get("name")
+
+        if name is None and self.instance:
+            name = self.instance.name
+
+        if len(name) < 5:
             raise serializers.ValidationError(
-                "Product title length should be at least 5"
+                {"title": "Product title length should be at least 5."}
             )
+
         return data
 
     def create(self, validated_data):

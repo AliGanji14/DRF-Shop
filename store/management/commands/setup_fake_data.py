@@ -24,9 +24,7 @@ from store.factories import (
     CommentFactory,
     OrderItemFactory,
     ProductFactory,
-    DiscountFactory,
     CustomerFactory,
-    AddressFactory,
     OrderFactory,
     CartItemFactory,
 )
