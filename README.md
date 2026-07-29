@@ -98,6 +98,4 @@ DRF-Shop/
 
 ## Author
 
-**Ali Ganji**
-
 Ali Ganji — [GitHub](https://github.com/AliGanji14)
