@@ -18,25 +18,25 @@ from .models import (
 
 
 class InventoryFilter(admin.SimpleListFilter):
-    LESS_THAN_3 = "<3"
-    BETWEEN_3_AND_10 = "3<=10"
-    MORE_THAN_10 = ">10"
+    LOW = "<3"
+    MEDIUM = "3<=10"
+    HIGH = ">10"
     title = "Critical Inventory Status"
     parameter_name = "inventory"
 
     def lookups(self, request, model_admin):
         return [
-            (InventoryFilter.LESS_THAN_3, "High"),
-            (InventoryFilter.BETWEEN_3_AND_10, "Medium"),
-            (InventoryFilter.MORE_THAN_10, "OK"),
+            (InventoryFilter.LOW, "High"),
+            (InventoryFilter.MEDIUM, "Medium"),
+            (InventoryFilter.HIGH, "OK"),
         ]
 
     def queryset(self, request, queryset):
-        if self.value() == InventoryFilter.LESS_THAN_3:
+        if self.value() == InventoryFilter.LOW:
             return queryset.filter(inventory__lt=3)
-        if self.value() == InventoryFilter.BETWEEN_3_AND_10:
+        if self.value() == InventoryFilter.MEDIUM:
             return queryset.filter(inventory__range=(3, 10))
-        if self.value() == InventoryFilter.MORE_THAN_10:
+        if self.value() == InventoryFilter.HIGH:
             return queryset.filter(inventory__gt=10)
 
 
@@ -64,10 +64,12 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ["name"]
 
     def inventory_status(self, product: Product):
-        if product.inventory < 10:
+        LOW_STOCK = 10
+        HIGH_STOCK = 50
+        if product.inventory < LOW_STOCK:
             return "Low"
-        elif product.inventory > 50:
-            return "Hight"
+        elif product.inventory > HIGH_STOCK:
+            return "High"
         return "Medium"
 
     @admin.display(ordering="category__title")
@@ -181,7 +183,7 @@ class CartItemInline(admin.TabularInline):
 
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
-    list_display = ["id", "created_at"]
+    list_display = ["id", "datetime_created"]
     inlines = [CartItemInline]
 
 
