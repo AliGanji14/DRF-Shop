@@ -73,9 +73,7 @@ class OrderFactory(DjangoModelFactory):
         model = models.Order
 
     status = factory.LazyFunction(
-        lambda: random.choice(
-            [models.Order.ORDER_STATUS_UNPAID, models.Order.ORDER_STATUS_CANCELED]
-        )
+        lambda: random.choice([models.OrderStatus.UNPAID, models.OrderStatus.CANCELED])
     )
 
 
@@ -95,9 +93,9 @@ class CommentFactory(DjangoModelFactory):
     status = factory.LazyFunction(
         lambda: random.choice(
             [
-                models.Comment.COMMENT_STATUS_WAITING,
-                models.Comment.COMMENT_STATUS_APPROVED,
-                models.Comment.COMMENT_STATUS_NOT_APPROVED,
+                models.CommentStatus.WAITING,
+                models.CommentStatus.APPROVED,
+                models.CommentStatus.NOT_APPROVED,
             ]
         )
     )

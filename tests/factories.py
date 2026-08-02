@@ -76,7 +76,7 @@ class OrderFactory(DjangoModelFactory):
         model = models.Order
 
     customer = factory.SubFactory(CustomerFactory)
-    status = models.Order.ORDER_STATUS_UNPAID
+    status = models.OrderStatus.UNPAID
 
 
 class OrderItemFactory(DjangoModelFactory):
@@ -96,4 +96,4 @@ class CommentFactory(DjangoModelFactory):
     product = factory.SubFactory(ProductFactory)
     name = factory.Faker("name")
     body = factory.Faker("paragraph")
-    status = models.Comment.COMMENT_STATUS_APPROVED
+    status = models.CommentStatus.APPROVED

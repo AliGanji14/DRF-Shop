@@ -29,6 +29,7 @@ from .models import (
     CartItem,
     Order,
     OrderItem,
+    CommentStatus
 )
 from .serializers import (
     ProductSerializer,
@@ -101,7 +102,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         product_pk = self.kwargs["product_pk"]
         return Comment.objects.filter(
-            product_id=product_pk, status=Comment.COMMENT_STATUS_APPROVED
+            product_id=product_pk, status=CommentStatus.APPROVED
         ).all()
 
     def get_serializer_context(self):

@@ -14,6 +14,7 @@ from .models import (
     Order,
     OrderItem,
     Product,
+    Address,
 )
 
 
@@ -188,3 +189,8 @@ class CartAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Category)
+
+
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ["customer", "province", "city", "street"]

@@ -73,6 +73,12 @@ class Customer(models.Model):
         ]
 
 
+class OrderStatus(models.TextChoices):
+    PAID = "p", "Paid"
+    UNPAID = "u", "Unpaid"
+    CANCELED = "c", "Canceled"
+
+
 class Address(models.Model):
     customer = models.OneToOneField(
         Customer, on_delete=models.CASCADE, primary_key=True
@@ -82,18 +88,12 @@ class Address(models.Model):
     street = models.CharField(max_length=255)
 
     def __str__(self):
-        return f"Comment by {self.name}"
+        return f"{self.customer} - {self.city}, {self.street}"
 
 
 class UnpaidOrderManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(status=Order.ORDER_STATUS_UNPAID)
-
-
-class OrderStatus(models.TextChoices):
-    PAID = "p", "Paid"
-    UNPAID = "u", "Unpaid"
-    CANCELED = "c", "Canceled"
+        return super().get_queryset().filter(status=OrderStatus.UNPAID)
 
 
 class Order(TimeStampedModel):
@@ -135,12 +135,12 @@ class OrderItem(models.Model):
 
 class CommentManager(models.Manager):
     def get_approved(self):
-        return self.get_queryset().filter(status=Comment.COMMENT_STATUS_APPROVED)
+        return self.get_queryset().filter(status=CommentStatus.APPROVED)
 
 
 class ApprovedCommentManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(status=Comment.COMMENT_STATUS_APPROVED)
+        return super().get_queryset().filter(status=CommentStatus.APPROVED)
 
 
 class CommentStatus(models.TextChoices):
