@@ -2,7 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from store.models import CartItem, Order
+from store.models import CartItem, Order, OrderStatus
 from tests.factories import (
     AdminUserFactory,
     CartFactory,
@@ -126,12 +126,12 @@ def test_product_with_order_items_cannot_be_deleted(admin_client):
     assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
 
-def test_cart_item_post_patch_and_delete_flow(api_client):
+def test_cart_item_post_patch_and_delete_flow(authenticated_client):
     cart = CartFactory()
     product = ProductFactory()
     list_url = reverse("store:cart-items-list", kwargs={"cart_pk": cart.id})
 
-    post_response = api_client.post(
+    post_response = authenticated_client.post(
         list_url,
         {"product": product.id, "quantity": 2},
         format="json",
@@ -144,12 +144,12 @@ def test_cart_item_post_patch_and_delete_flow(api_client):
         kwargs={"cart_pk": cart.id, "pk": cart_item.id},
     )
 
-    patch_response = api_client.patch(detail_url, {"quantity": 5}, format="json")
+    patch_response = authenticated_client.patch(detail_url, {"quantity": 5}, format="json")
     assert patch_response.status_code == status.HTTP_200_OK
     cart_item.refresh_from_db()
     assert cart_item.quantity == 5
 
-    delete_response = api_client.delete(detail_url)
+    delete_response = authenticated_client.delete(detail_url)
     assert delete_response.status_code == status.HTTP_204_NO_CONTENT
     assert not CartItem.objects.filter(id=cart_item.id).exists()
 
@@ -192,7 +192,7 @@ def test_non_admin_cannot_patch_order(authenticated_client):
 
     response = authenticated_client.patch(
         reverse("store:order-detail", args=[order.id]),
-        {"status": Order.ORDER_STATUS_PAID},
+        {"status": OrderStatus.PAID},
         format="json",
     )
 
@@ -200,17 +200,17 @@ def test_non_admin_cannot_patch_order(authenticated_client):
 
 
 def test_admin_can_patch_order_status(admin_client):
-    order = OrderFactory(status=Order.ORDER_STATUS_UNPAID)
+    order = OrderFactory(status=OrderStatus.UNPAID)
 
     response = admin_client.patch(
         reverse("store:order-detail", args=[order.id]),
-        {"status": Order.ORDER_STATUS_PAID},
+        {"status": OrderStatus.PAID},
         format="json",
     )
 
     assert response.status_code == status.HTTP_200_OK
     order.refresh_from_db()
-    assert order.status == Order.ORDER_STATUS_PAID
+    assert order.status == OrderStatus.PAID
 
 
 def test_admin_can_delete_order_without_items(admin_client):
