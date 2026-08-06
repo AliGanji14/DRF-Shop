@@ -4,21 +4,16 @@ on:
   push:
   pull_request:
 
-
 jobs:
   test:
-
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
-
 
       - name: Build Docker containers
         run: docker compose build
 
-
       - name: Run tests
-        run: docker compose run web python manage.py test
+        run: docker compose run web pytest
