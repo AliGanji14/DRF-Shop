@@ -17,5 +17,12 @@ jobs:
       - name: Build Docker containers
         run: docker compose build
 
+      - name: Start containers
+        run: docker compose up -d
+
       - name: Run tests
-        run: docker compose run web pytest
+        run: docker compose exec -T web pytest
+
+      - name: Show Docker logs
+        if: failure()
+        run: docker compose logs
