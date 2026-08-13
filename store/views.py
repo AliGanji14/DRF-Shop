@@ -175,7 +175,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
             serializer = CustomerSerializer(customer)
             return Response(serializer.data)
         elif request.method == "PUT":
-            serializer = CustomerSerializer(customer, data=request.data)
+            serializer = CustomerSerializer(customer, data=request.data,partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)

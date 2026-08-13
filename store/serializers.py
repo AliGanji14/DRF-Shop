@@ -1,9 +1,10 @@
 from rest_framework import serializers
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from django.db import transaction
 from django.db.models import F
 from django.utils.text import slugify
 from django.db import transaction
+from django.conf import settings
 from .models import (
     Product,
     Category,
@@ -53,8 +54,10 @@ class ProductSerializer(serializers.ModelSerializer):
             "description",
         ]
 
-    def get_unit_price_after_tax(self, product: Product):
-        return round(product.unit_price * Decimal(1.09), 2)
+    def get_unit_price_after_tax(self, product):
+        return (product.unit_price * (Decimal("1") + settings.TAX_RATE)).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
 
     def validate(self, data):
         name = data.get("name")
@@ -148,7 +151,7 @@ class CartSerializer(serializers.ModelSerializer):
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ["id", "user", "birth_date"]
+        fields = ["id", "user", "phone_number", "birth_date"]
         read_only_fields = ["user"]
 
 
@@ -233,32 +236,23 @@ class OrderCreateSerializer(serializers.Serializer):
             cart_id = self.validated_data["cart_id"]
             user_id = self.context["user_id"]
 
-            customer = Customer.objects.filter(
-                user_id=user_id
-            ).first()
+            customer = Customer.objects.filter(user_id=user_id).first()
 
             if customer is None:
-                raise serializers.ValidationError(
-                    "Customer profile does not exist."
-                )
+                raise serializers.ValidationError("Customer profile does not exist.")
 
             cart_items = list(
-                CartItem.objects
-                .select_related("product")
+                CartItem.objects.select_related("product")
                 .select_for_update()
                 .filter(cart_id=cart_id)
             )
 
             if not cart_items:
-                raise serializers.ValidationError(
-                    "Cart is empty."
-                )
+                raise serializers.ValidationError("Cart is empty.")
 
             for cart_item in cart_items:
-                product = (
-                    Product.objects
-                    .select_for_update()
-                    .get(pk=cart_item.product_id)
+                product = Product.objects.select_for_update().get(
+                    pk=cart_item.product_id
                 )
 
                 if product.inventory < cart_item.quantity:
@@ -283,9 +277,7 @@ class OrderCreateSerializer(serializers.Serializer):
             OrderItem.objects.bulk_create(order_items)
 
             for cart_item in cart_items:
-                Product.objects.filter(
-                    pk=cart_item.product_id
-                ).update(
+                Product.objects.filter(pk=cart_item.product_id).update(
                     inventory=F("inventory") - cart_item.quantity
                 )
 
@@ -298,4 +290,3 @@ class OrderItemProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ["id", "name", "unit_price"]
-

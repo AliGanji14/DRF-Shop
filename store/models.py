@@ -112,7 +112,7 @@ class Order(TimeStampedModel):
 
     class Meta:
         ordering = ["-datetime_created"]
-
+        indexes = [models.Index(fields=["status"]), models.Index(fields=["-datetime_created"])]
     objects = models.Manager()
     unpaid_orders = UnpaidOrderManager()
 
@@ -167,6 +167,7 @@ class Comment(TimeStampedModel):
 
     class Meta:
         ordering = ["-datetime_created"]
+        indexes = [models.Index(fields=["product", "status"])]
 
     objects = CommentManager()
     approved = ApprovedCommentManager()
