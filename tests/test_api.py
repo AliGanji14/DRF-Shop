@@ -183,8 +183,9 @@ def test_customer_sees_only_own_orders(authenticated_client, user):
     response = authenticated_client.get(reverse("store:order-list"))
 
     assert response.status_code == status.HTTP_200_OK
-    returned_ids = {item["id"] for item in response.data}
-    assert returned_ids == {own_order.id}
+    returned_ids = {item["id"] for item in response.data["results"]}
+    assert own_order.id in returned_ids
+    assert len(returned_ids) == 1
 
 
 def test_non_admin_cannot_patch_order(authenticated_client):
