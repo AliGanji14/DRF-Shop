@@ -54,6 +54,12 @@ class Product(TimeStampedModel):
 
     class Meta:
         ordering = ["name"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(inventory__gte=0),
+                name="product_inventory_non_negative",
+            ),
+        ]
 
     def __str__(self):
         return self.name

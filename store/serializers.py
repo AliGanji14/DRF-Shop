@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from decimal import Decimal
+from django.db import transaction
+from django.db.models import F
 from django.utils.text import slugify
 from django.db import transaction
 from .models import (
@@ -15,9 +17,7 @@ from .models import (
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    number_of_product = serializers.IntegerField(
-        source="products.count", read_only=True
-    )
+    number_of_product = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Category
@@ -133,17 +133,16 @@ class CartItemSerializer(serializers.ModelSerializer):
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
-    total_price = serializers.SerializerMethodField()
+    total_price = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        read_only=True,
+    )
 
     class Meta:
         model = Cart
         fields = ["id", "items", "total_price"]
         read_only_fields = ["id"]
-
-    def get_total_price(self, cart: Cart):
-        return sum(
-            [item.quantity * item.product.unit_price for item in cart.items.all()]
-        )
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -179,22 +178,25 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
-    total_price = serializers.SerializerMethodField()
+    total_price = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        read_only=True,
+    )
 
     class Meta:
         model = Order
         fields = ["id", "status", "datetime_created", "items", "total_price"]
 
-    def get_total_price(self, order: Order):
-        return sum(
-            [item.product.unit_price * item.quantity for item in order.items.all()]
-        )
-
 
 class OrderForAdminSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
     customer = OrderCustomerSerializer()
-    total_price = serializers.SerializerMethodField()
+    total_price = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        read_only=True,
+    )
 
     class Meta:
         model = Order
@@ -206,11 +208,6 @@ class OrderForAdminSerializer(serializers.ModelSerializer):
             "items",
             "total_price",
         ]
-
-    def get_total_price(self, order: Order):
-        return sum(
-            [item.quantity * item.product.unit_price for item in order.items.all()]
-        )
 
 
 class OrderUpdateSerializer(serializers.ModelSerializer):
@@ -231,35 +228,70 @@ class OrderCreateSerializer(serializers.Serializer):
             )
         return cart_id
 
-    def save(self, **kwargs):
-        with transaction.atomic():
-            cart_id = self.validated_data["cart_id"]
-            user_id = self.context["user_id"]
-            customer = Customer.objects.get(user_id=user_id)
+def save(self, **kwargs):
+    with transaction.atomic():
+        cart_id = self.validated_data["cart_id"]
+        user_id = self.context["user_id"]
 
-            order = Order()
-            order.customer = customer
-            order.save()
+        customer = Customer.objects.filter(
+            user_id=user_id
+        ).first()
 
-            cart_items = CartItem.objects.select_related("product").filter(
-                cart_id=cart_id
+        if customer is None:
+            raise serializers.ValidationError(
+                "Customer profile does not exist."
             )
 
-            order_items = [
-                OrderItem(
-                    order=order,
-                    product=cart_item.product,
-                    unit_price=cart_item.product.unit_price,
-                    quantity=cart_item.quantity,
+        cart_items = list(
+            CartItem.objects
+            .select_related("product")
+            .select_for_update()
+            .filter(cart_id=cart_id)
+        )
+
+        if not cart_items:
+            raise serializers.ValidationError(
+                "Cart is empty."
+            )
+
+        for cart_item in cart_items:
+            product = (
+                Product.objects
+                .select_for_update()
+                .get(pk=cart_item.product_id)
+            )
+
+            if product.inventory < cart_item.quantity:
+                raise serializers.ValidationError(
+                    f"Not enough inventory for {product.name}"
                 )
-                for cart_item in cart_items
-            ]
 
-            OrderItem.objects.bulk_create(order_items)
+        order = Order.objects.create(
+            customer=customer,
+        )
 
-            Cart.objects.get(id=cart_id).delete()
+        order_items = [
+            OrderItem(
+                order=order,
+                product=cart_item.product,
+                unit_price=cart_item.product.unit_price,
+                quantity=cart_item.quantity,
+            )
+            for cart_item in cart_items
+        ]
 
-            return order
+        OrderItem.objects.bulk_create(order_items)
+
+        for cart_item in cart_items:
+            Product.objects.filter(
+                pk=cart_item.product_id
+            ).update(
+                inventory=F("inventory") - cart_item.quantity
+            )
+
+        Cart.objects.filter(pk=cart_id).delete()
+
+        return order
 
 
 class OrderItemProductSerializer(serializers.ModelSerializer):
@@ -267,14 +299,3 @@ class OrderItemProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ["id", "name", "unit_price"]
 
-
-class OrderItemSerializer(serializers.ModelSerializer):
-    product = OrderItemProductSerializer()
-    item_total_price = serializers.SerializerMethodField()
-
-    class Meta:
-        model = CartItem
-        fields = ["id", "product", "quantity", "item_total_price"]
-
-    def get_item_total_price(self, order_item: OrderItem):
-        return order_item.product.unit_price * order_item.quantity

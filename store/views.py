@@ -8,13 +8,18 @@ from rest_framework.mixins import (
     RetrieveModelMixin,
     DestroyModelMixin,
 )
+from decimal import Decimal
+from django.db.models import DecimalField, F, Sum, Value
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from django.db.models import Prefetch
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
-
+from django.db.models import Count
+from django.db.models import F, Sum, DecimalField, ExpressionWrapper
 
 from .signals import order_created
 from .filters import ProductFilter
@@ -29,7 +34,7 @@ from .models import (
     CartItem,
     Order,
     OrderItem,
-    CommentStatus
+    CommentStatus,
 )
 from .serializers import (
     ProductSerializer,
@@ -62,7 +67,9 @@ class ProductViewSet(viewsets.ModelViewSet):
     ordering = ["id"]
 
     def destroy(self, request, *args, **kwargs):
-        product = get_object_or_404(Product.objects.select_related("category"), pk=kwargs["pk"])
+        product = get_object_or_404(
+            Product.objects.select_related("category"), pk=kwargs["pk"]
+        )
         if product.order_items.count() > 0:
             return Response(
                 {
@@ -77,7 +84,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 class CategoryViewSet(viewsets.ModelViewSet):
     serializer_class = CategorySerializer
-    queryset = Category.objects.prefetch_related("products").all()
+    queryset = Category.objects.annotate(number_of_product=Count("products"))
     permission_classes = [IsAdminOrReadOnly]
 
     def destroy(self, request, *args, **kwargs):
@@ -137,8 +144,22 @@ class CartViewSet(
     CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, GenericViewSet
 ):
     serializer_class = CartSerializer
-    queryset = Cart.objects.prefetch_related("items__product").all()
-    lookup_value_regex = r"[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}"
+
+    queryset = Cart.objects.annotate(
+        total_price=Coalesce(
+            Sum(
+                F("items__quantity") * F("items__product__unit_price"),
+                output_field=DecimalField(),
+            ),
+            Value(Decimal("0")),
+        )
+    )
+
+    lookup_value_regex = (
+        r"[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?"
+        r"[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?"
+        r"[0-9a-fA-F]{12}"
+    )
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -175,16 +196,29 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+
         queryset = (
             Order.objects.select_related("customer__user")
             .prefetch_related(
-                Prefetch("items", queryset=OrderItem.objects.select_related("product"))
+                Prefetch(
+                    "items",
+                    queryset=OrderItem.objects.select_related("product"),
+                )
             )
-            .all()
+            .annotate(
+                total_price=Coalesce(
+                    Sum(
+                        F("items__quantity") * F("items__product__unit_price"),
+                        output_field=DecimalField(),
+                    ),
+                    Value(Decimal("0")),
+                )
+            )
         )
 
         if user.is_staff:
             return queryset
+
         return queryset.filter(customer__user_id=user.id)
 
     def get_serializer_class(self):
@@ -211,24 +245,26 @@ class OrderViewSet(viewsets.ModelViewSet):
         create_order_serializer.is_valid(raise_exception=True)
         created_order = create_order_serializer.save()
 
-        order_created.send_robust(self.__class__, order=created_order)
+        order_created.send(self.__class__, order=created_order)
 
-        serializer = OrderSerializer(created_order)
+        created_order = self.get_queryset().get(pk=created_order.pk)
+
+        serializer = OrderSerializer(
+            created_order,
+            context=self.get_serializer_context(),
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
-        order = Order.objects.prefetch_related("items").get(pk=kwargs["pk"])
-
-        if order.items.exists():
-            return Response(
-                {
-                    "error": "There is some order items including this order."
-                    "Please remove them first."
-                },
-                status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        with transaction.atomic():
+            order = get_object_or_404(
+                Order.objects.select_for_update(),
+                pk=kwargs["pk"],
             )
 
-        order.delete()
+            OrderItem.objects.filter(order=order).delete()
+            order.delete()
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

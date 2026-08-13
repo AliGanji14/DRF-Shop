@@ -1,7 +1,13 @@
 from django.dispatch import receiver
 from store.signals import order_created
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(order_created)
-def after_order_created(sender, **kwargs):
-    print(f'New order is created {kwargs["order"].id}')
+def order_created_handler(sender, order, **kwargs):
+    logger.info(
+        "Order created",
+        extra={"order_id": order.id},
+    )
